@@ -43,7 +43,6 @@ wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4
 
 #removing columns
 
-
 waps<-grep("WAP", names(wifi_train), value = TRUE)  #WAP columns
 
 
@@ -55,9 +54,25 @@ waps_t_b1_ns<-grep("WAP", names(wifi_t_b1_ns), value = TRUE) #WAP columns wo sig
 wifi_t_b1_ws<-wifi_t_b1%>%
   select(-waps_t_b1_ns) #df waps w signal
 
-
-
 #lo mismo por row#
+
+
+theme_set(theme_light())
+plot(wifi_train$LATITUDE, wifi_train$LONGITUDE)#
+     
+
+qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
+
+qplot(x = BUILDINGID, y = TIMESTAMP, data =wifi_train)
+
+ggplot(wifi_t_b1_ws) + geom_jitter(x=waps, )
+
+#ggplot(wifi_train, aes(LONGITUDE, LATITUDE)) +
+  geom_polygon()
+
+#plotly(username = wifi_t_b1_ws,key = FLOOR)
+
+#scatterD3(x = LATITUDE, y = LONGITUDE,)
 ####
 
 ggplot(wifi_t_b1, aes(x=FLOOR),)+ 
