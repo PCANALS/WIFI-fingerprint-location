@@ -29,10 +29,11 @@ wifi_train<-wifi_train_o # to keep original#
 
 #### B._ SUBSETS####
 
-#identify columns with only 100 values###
 
+##changing values +100 to -110#
 
-wifi_train2<-wifi_train[,1:520]!=100
+wifi_train[wifi_train==100]<--110
+
 
 ####subset by building####
 wifi_t_b0<-wifi_train%>%dplyr:::filter(BUILDINGID == 0) #floors 0 to 3
@@ -40,10 +41,29 @@ wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
 wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
 
 
+#removing columns
 
-                                                                                          q
+
+waps<-grep("WAP", names(wifi_train), value = TRUE)  #WAP columns
+
+
+
+wifi_t_b1_ns<-wifi_t_b1[!vapply(wifi_t_b1[waps], function(x) length(unique(x)) > 1, logical(1L))] #df waps wo signal
+
+waps_t_b1_ns<-grep("WAP", names(wifi_t_b1_ns), value = TRUE) #WAP columns wo signal
+
+wifi_t_b1_ws<-wifi_t_b1%>%
+  select(-waps_t_b1_ns) #df waps w signal
+
+
+
+#lo mismo por row#
+####
+
 ggplot(wifi_t_b1, aes(x=FLOOR),)+ 
          geom_jitter(aes(y=WAP400), na.rm = FALSE)
 
+
+#tab<-tableplot(wifi_t_b1, plot = FALSE)
+
 ####~~~~~~~~   NOTES - NEXT STEPS    ~~~~~~~~####
-#load(file = "wifi_validation_o.Rdata") #is not saving/loading#
