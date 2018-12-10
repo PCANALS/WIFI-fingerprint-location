@@ -59,6 +59,7 @@ waps<-grep("WAP", names(wifi_train), value = TRUE)
 wifi_pos<-setdiff(wifi_names, waps)
 
 #remove rows without signal#
+
 wifi_train<-wifi_train%>%filter(apply(wifi_train[waps],1, function(x) length(unique(x))) > 1)
 
 ##split df in with signal and without signal##
@@ -76,6 +77,23 @@ wifi_t_ws_max<- apply(wifi_t_ws[waps_ws], 1, function(x) names(which.max(x)))
 wifi_t_ws$wifi_t_ws_max<-wifi_t_ws_max #new colum with max values name colums
 
 
+#### KNN with max###
+
+partition<-createDataPartition(wifi_t_ws$BUILDINGID,times = 2, p = 0.01)
+
+train<-wifi_t_ws[partition$Resample1,]
+test<-wifi_t_ws[partition$Resample2,]
+
+
+ctrl<-trainControl(method="repeatedcv", number = 10, repeats = 3)
+
+knn<-train(BUILDINGID~.,data=train,
+            method= "knn", trControl= ctrl,
+            tuneLength = 10)
+
+knn
+
+summary(knn)
 
 # d<-wifi_train[!(wifi_train[waps]=="-110"),]
 # wifi_t_signal<-wifi_train[apply(wifi_train[waps],2, function(x) min(x) ==-110)] #con señal#
