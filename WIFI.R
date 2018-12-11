@@ -37,9 +37,10 @@ wifi_train[wifi_train==100]<--110
 
 
 ####subset by building####
-wifi_t_b0<-wifi_train%>%dplyr:::filter(BUILDINGID == 0) #floors 0 to 3
-wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
-wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
+
+# wifi_t_b0<-wifi_train%>%dplyr:::filter(BUILDINGID == 0) #floors 0 to 3
+# wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
+# wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
 
 
 ####removing columns and rows####
@@ -66,57 +67,34 @@ wifi_t_nosignal<-cbind(df_waps[!apply(df_waps,2, function(x) length(unique(x))) 
 
 rm(df_nowaps, df_waps)
 
-
-wifi_t_ns<-wifi_train[!apply(wifi_train,2, function(x) length(unique(x))) > 1] #removes the waps with no signal#
-wifi_t_ws<-wifi_train[apply(wifi_train,2, function(x) length(unique(x))) > 1]  #keeps waps with signal#
-
-waps_ws<-grep("WAP", names(wifi_t_ws), value = TRUE)
+waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 
 #colum with max signal#
 
-wifi_t_ws_max<- apply(wifi_t_ws[waps_ws], 1, function(x) names(which.max(x)))
-wifi_t_ws$wifi_t_ws_max<-wifi_t_ws_max #new colum with max values name colums
+WAP_max<- apply(wifi_t_signal[waps_ws], 1, function(x) names(which.max(x)))
+wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 
 
 #### KNN with max###
 
-partition<-createDataPartition(wifi_t_ws$BUILDINGID,times = 2, p = 0.01)
+partition<-createDataPartition(wifi_t_signal$BUILDINGID,times = 2, p = 0.01)
 
-train<-wifi_t_ws[partition$Resample1,]
-test<-wifi_t_ws[partition$Resample2,]
+train<-wifi_t_signal[partition$Resample1,]
+test<-wifi_t_signal[partition$Resample2,]
 
+#check distribution#
+# qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
+# qplot(x = LATITUDE, y = LONGITUDE, data = train)
 
 ctrl<-trainControl(method="repeatedcv", number = 10, repeats = 3)
 
-knn<-train(BUILDINGID~.,data=train,
+knn<-train(BUILDINGID~WAP_max,data=train,
             method= "knn", trControl= ctrl,
             tuneLength = 10)
 
 knn
 
 summary(knn)
-
-# d<-wifi_train[!(wifi_train[waps]=="-110"),]
-# wifi_t_signal<-wifi_train[apply(wifi_train[waps],2, function(x) min(x) ==-110)] #con señal#
-# wifi_t_nosignal<-wifi_train[apply(wifi_train,2, function(x) max(x) ==-110)]
-#wifi_t_signal<-wifi_train[!apply(wifi_train[waps],2, function(x) min(unique(x))) > 1]
-#df with all attributes except waps# NOT WORKING#
-# wifi_nowaps_df <- setdiff(wifi_train,wifi_pos)
-
-
-#ROW#
-
-# x<-wifi_train[apply(wifi_train[,waps],1,function(x)(min(x==-110)))]
-# > View(x)
-# > x<-wifi_train[!apply(wifi_train[,waps],1,function(x)(min(x==-110)))]
-# Error in `[.data.frame`(wifi_train, !apply(wifi_train[, waps], 1, function(x) (min(x ==  : 
-#  undefined columns selected
-# x<-wifi_train[!apply(wifi_train[,waps],1,function(x)(min(x <-110)))]
-# x<-wifi_train[!apply(wifi_train[waps],1,function(x)(min(x <-110)))]
-# x<-wifi_train[!apply(wifi_train[waps],1,function(x)(min(x=<-110)))]
-# Error: unexpected assignment in "x<-wifi_train[!apply(wifi_train[waps],1,function(x)(min(x=<-"
-# x<-wifi_train[!apply(wifi_train[1:520],1,function(x)(min==-110)))]
-# Error: unexpected ')' in "x<-wifi_train[!apply(wifi_train[1:520],1,function(x)(min==-110)))"
 
 
 ##by building##
@@ -131,17 +109,18 @@ wifi_t_b1_ws<-wifi_t_b1%>%
   select(-waps_t_b1_ns) #df waps w signal
 
 #### PLOTS ####
-theme_set(theme_light())
-plot(wifi_train$LATITUDE, wifi_train$LONGITUDE)#
-     
-
-qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
-
-qplot(x = BUILDINGID, y = TIMESTAMP, data =wifi_train)
-
-
-ggplot(wifi_t_b1, aes(x=FLOOR),)+ 
-         geom_count(aes(y=WAP400), na.rm = FALSE)
+# theme_set(theme_light())
+# plot(wifi_train$LATITUDE, wifi_train$LONGITUDE)#
+#      
+# par(mfrow=c(1,2)) 
+# qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
+# qplot(x = LATITUDE, y = LONGITUDE, data = train)
+# 
+# qplot(x = BUILDINGID, y = TIMESTAMP, data =wifi_train)
+# 
+# 
+# ggplot(wifi_t_b1, aes(x=FLOOR),)+ 
+#          geom_count(aes(y=WAP400), na.rm = FALSE)
 
 
 #tab<-tableplot(wifi_t_b1, plot = FALSE)
