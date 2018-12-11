@@ -8,6 +8,9 @@ Sys.setlocale(category = "LC_ALL", locale = "english")
 #### ._LIBRARIES####
 library(dplyr)
 library(ggplot2)
+library(caret)
+library(doParallel)
+
 
 #### A._ SETTING FILES####
 
@@ -21,16 +24,11 @@ load(file = "wifi_train_o.Rdata")
 # save(wifi_validation_o, file = "wifi_validation_o.Rdata")
 load(file = "wifi_validation_o.Rdata")
 
-
 wifi_train<-wifi_train_o # to keep original#
-
-
-
 
 #### B._ SUBSETS####
 
-
-###changing values +100 to -110###
+####changing values +100 to -110####
 # when we find values= to 100 means 
 # not signal detection. In order to organize properly the bad and good signals 
 # we modify this values with a value = to not signal
@@ -44,28 +42,31 @@ wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
 wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
 
 
-#removing columns
-
-waps<-grep("WAP", names(wifi_train), value = TRUE)  #WAP columns
-
-wifi_train$BUILDINGID<-as.factor(wifi_train$BUILDINGID)
-wifi_train$FLOOR<-as.factor(wifi_train$FLOOR)
+####removing columns and rows####
 
 
 wifi_names<-names(wifi_train)
 
-waps<-grep("WAP", names(wifi_train), value = TRUE) 
+waps<-grep("WAP", names(wifi_train), value = TRUE)
+wifi_names<-names(wifi_train)
+nowaps<-setdiff(wifi_names, waps)
 
-wifi_pos<-setdiff(wifi_names, waps)
+df_nowaps<-wifi_train[nowaps]
+df_waps<-wifi_train[waps]
+
 
 #remove rows without signal#
 
 wifi_train<-wifi_train%>%filter(apply(wifi_train[waps],1, function(x) length(unique(x))) > 1)
 
-##split df in with signal and without signal##
+##split df in with signal and without signal## BUENO######
 
-#wifi_t_ns<-wifi_train[!vapply(wifi_train[waps], function(x) length(unique(x)) > 1, logical(1L))]
-#wifi_t_ns<-wifi_train[!apply(wifi_train[waps],2, function(x) length(unique(x))) > 1]
+wifi_t_signal<-cbind(df_waps[apply(df_waps,2, function(x) length(unique(x))) > 1], df_nowaps) #keeps waps with signal#
+wifi_t_nosignal<-cbind(df_waps[!apply(df_waps,2, function(x) length(unique(x))) > 1], df_nowaps) #removes the waps with no signal#
+
+rm(df_nowaps, df_waps)
+
+
 wifi_t_ns<-wifi_train[!apply(wifi_train,2, function(x) length(unique(x))) > 1] #removes the waps with no signal#
 wifi_t_ws<-wifi_train[apply(wifi_train,2, function(x) length(unique(x))) > 1]  #keeps waps with signal#
 
