@@ -26,23 +26,29 @@ load(file = "wifi_validation_o.Rdata")
 wifi_train<-wifi_train_o # to keep original#
 wifi_validation<-wifi_validation_o # to keep original#
 
+rm(wifi_train_o, wifi_validation_o)
+
 #### TYPES ATTRIBUTES ###
 
 wifi_names<-names(wifi_train)
+wifi_names_v<-names(wifi_validation)
+all.equal(wifi_names, wifi_names_v) #columns in validation and in train are the same#
 
+#splitting in groups the columns names#
 waps<-grep("WAP", names(wifi_train), value = TRUE)
-wifi_names<-names(wifi_train)
 nowaps<-setdiff(wifi_names, waps)
-
 fac<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID")
 
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
+wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
+
 
 rm(fac)
 #### B._ SUBSETS####
 
 ####B_remove duplicate rows####
 wifi_train<-distinct(wifi_train)
+wifi_validation<-distinct(wifi_validation)
 
 
 ####B_changing values +100 to -110####
@@ -51,31 +57,57 @@ wifi_train<-distinct(wifi_train)
 # we modify this values with a value = to not signal
 
 wifi_train[wifi_train==100]<--110
+wifi_validation[wifi_validation==100]<--110
 
 
 ####B_removing columns and rows with same value/no unique####
-
-df_nowaps<-wifi_train[nowaps]
-df_waps<-wifi_train[waps]
 
 
 #remove rows without signal#
 
 wifi_train<-wifi_train%>%filter(apply(wifi_train[waps],1, function(x) length(unique(x))) > 1)
 
+
 ##split df in with signal and without signal##
+
+
+df_nowaps<-wifi_train[nowaps]
+df_waps<-wifi_train[waps]
+df_nowaps_val<-wifi_validation[nowaps]
+df_waps_val<-wifi_validation[waps]
+
 
 wifi_t_signal<-cbind(df_waps[apply(df_waps,2, function(x) length(unique(x))) > 1], df_nowaps) #keeps waps with signal#
 wifi_t_nosignal<-cbind(df_waps[!apply(df_waps,2, function(x) length(unique(x))) > 1], df_nowaps) #removes the waps with no signal#
 
+wifi_t_signal_val<-cbind(df_waps_val[apply(df_waps_val,2, function(x) length(unique(x))) > 1], df_nowaps_val) #keeps waps with signal#
+
+wifi_t_signal_names<-names(wifi_t_signal)
+wifi_t_signal_val_names<-names(wifi_t_signal_val)
+
+
 rm(df_nowaps, df_waps)
 
-waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
+####intersect with validation###
+wifi_t_signal_intersect<-intersect(wifi_t_signal_names, wifi_t_signal_val_names)
 
-#colum with max signal#
+wifi_t_signal<-wifi_t_signal[,wifi_t_signal_intersect]
+
+rm(wifi_t_signal_intersect, wifi_t_signal_names, wifi_t_signal_val_names)
+
+
+#####colum with max signal####
+waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 
 WAP_max<- apply(wifi_t_signal[waps_ws], 1, function(x) names(which.max(x)))
 wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
+
+
+
+####B_removing more -30####
+
+
+
 
 ####B_subset by building####
 
@@ -83,7 +115,9 @@ wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 # wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
 # wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
 
-####B_0 variance####
+####B_near 0 variance####
+
+
 
 
 #### MODELING PARTITION####
@@ -92,10 +126,13 @@ wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 cl<-makeCluster(3)
 doParallel:::registerDoParallel(cl)
 
+set.seed(123)
 partition<-createDataPartition(wifi_t_signal$BUILDINGID,times = 2, p = 0.01)
 
 train<-wifi_t_signal[partition$Resample1,]
 test<-wifi_t_signal[partition$Resample2,]
+
+rm(cl, partition)
 
 #check distribution#
 # qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
@@ -115,7 +152,10 @@ knn<-train(BUILDINGID~WAP_max,data=train,
 
 knn
 
-pred<-predict(knn, test)
+#saveRDS(knn, file = "knn.rds")
+# knn<-readRDS("knn.rds")
+
+pred<-predict(knn, test) ###error##
 confusionMatrix(pred, test$BUILDINGID)
 
 #### SVM_ LINEAR with max#### 
