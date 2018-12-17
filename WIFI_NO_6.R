@@ -51,7 +51,7 @@ fac2<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID"
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
 wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
 
-rm(fac,fac2)
+rm(fac,fac2, wifi_names, wifi_names_v)
 #### B._ SUBSETS####
 
 
@@ -97,7 +97,7 @@ wifi_t_signal_names<-names(wifi_t_signal)
 wifi_t_signal_val_names<-names(wifi_t_signal_val)
 
 
-rm(df_nowaps, df_waps)
+rm(df_nowaps, df_waps, df_nowaps_val, df_waps_val, wifi_t_nosignal)
 
 
 ####intersect with validation####
@@ -208,17 +208,18 @@ confusionMatrix(knn_pred_B_6, wifi_t_signal_val$BUILDINGID)
 #                  kernel="radial", 
 #                  ranges=list(cost=10^(-2:2), gamma=2^(-2:2)))
 
-system.time(svm_l_B_6<-train(BUILDINGID~WAP_max,data=wifi_t_signal, #aplicado en el train completo#
-           method= "svmLinear", trControl= ctrl,
-           tuneLength = 20))
-svm_l_B_6
+# system.time(svm_l_B_6<-train(BUILDINGID~WAP_max,data=wifi_t_signal, #aplicado en el train completo#
+#            method= "svmLinear", trControl= ctrl,
+#            tuneLength = 20))
+# svm_l_B_6
 
 #e values not trained and detected as maximum in the validation data set#
 errors_max_value<-c("WAP138", "WAP144", "WAP268", "WAP323", "WAP481")
 
-z<-e %in% WAP_max
+#this waps are in the validation df not in the train#
+eincluded<-errors_max_value %in% WAP_max
 
-#rows with max values not trained as maximun in the validation data sert#
+#rows with max values not trained as maximun in the validation data set#12#
 validation_error<-wifi_t_signal_val%>%dplyr::filter(WAP_max%in%errors_max_value)
 
 #add column with the columns error# and plot#
@@ -226,11 +227,11 @@ wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val
 
 plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
 
-#dataframe with the rows with errors in the max values##
+#dataframe with the rows with errors in the max values## #remove colums?
 
-training_error<--wifi_t_signal%>%dplyr::filter(WAP_max%in%errors_max_value)
-
-setdiff()
+# training_error<--wifi_t_signal%>%dplyr::filter(WAP_max%in%errors_max_value)
+# 
+# setdiff()
 
 saveRDS(svm_l_B_6, file = "svm_l_B_6.rds")
 svm_l_B_6<-readRDS("svm_l_B_6.rds") #by BUILDING#
