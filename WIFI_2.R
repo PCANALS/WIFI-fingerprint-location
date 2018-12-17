@@ -46,6 +46,7 @@ all.equal(wifi_names, wifi_names_v) #columns in validation and in train are the 
 waps<-grep("WAP", names(wifi_train), value = TRUE)
 nowaps<-setdiff(wifi_names, waps)
 fac<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID", "BF")
+fac2<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID")
 
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
 wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
@@ -54,12 +55,9 @@ wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor)
 rm(fac)
 #### B._ SUBSETS####
 
-troll<-wifi_train_o
 
-#troll<-filter(troll, USERID==6)
 
-wifi_notroll<-wifi_train_o
-wifi_notroll<-setdiff(wifi_notroll, troll)
+
 
 ####B_remove duplicate rows####
 wifi_train<-distinct(wifi_train)
@@ -113,10 +111,25 @@ rm(wifi_t_signal_intersect, wifi_t_signal_names, wifi_t_signal_val_names)
 waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 
 
+####troll####
+troll<-filter(wifi_t_signal, USERID==6)
+
+summary(wifi_t_signal[nowaps])
+summary(wifi_t_b2[nowaps])
+summary(troll[nowaps])
+summary(troll$WAP_max)
+summary(troll$WAP_max_value)
+str(troll$WAP_max_value)
+
+
 ####Remove vaues with les more than -30####
 
 x<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x>= -0.30)))
-y<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x>=-0.80)))
+t<-troll%>%filter(apply(troll[waps_ws],1, function(x) any(x>= -0.30)))
+
+table(x == t, useNA = 'ifany')
+
+y<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x-0.70)))
 summary(x[nowaps])#vemos el user a investigar#
 
 wifi_t_signal%>%filter(USERID==6)%>%count()
@@ -133,9 +146,28 @@ waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 WAP_max<- apply(wifi_t_signal[waps_ws], 1, function(x) names(which.max(x)))
 WAP_max_value<-apply(wifi_t_signal[waps_ws], 1, function(x) max(x))
 
+troll_max<- apply(troll[waps_ws], 1, function(x) names(which.max(x)))
+troll_max_value<-apply(troll[waps_ws], 1, function(x) max(x))
+hist(troll_max_value)
+
+
+
+
+summary(troll_max_value)
+
 wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 wifi_t_signal$WAP_max_value<-WAP_max_value
 
+troll$troll_max<-troll_max
+troll$troll_max_value<-troll_max_value
+
+
+tt<-troll%>%filter(apply(troll[troll_max_value],1, function(x) between(x, -0.30,0)))
+
+summary(troll$troll_max_value)
+
+
+summary(troll$troll_max_value)
 
 WAP_max_val<- apply(wifi_t_signal_val[waps_ws], 1, function(x) names(which.max(x)))
 WAP_max_value_val<-apply(wifi_t_signal_val[waps_ws], 1, function(x) max(x))
@@ -151,7 +183,7 @@ wifi_t_signal_val$WAP_max_value<-WAP_max_value_val
 
 # wifi_t_b0<-wifi_train%>%dplyr:::filter(BUILDINGID == 0) #floors 0 to 3
 # wifi_t_b1<-wifi_train%>%dplyr:::filter(BUILDINGID == 1) #floors 0 to 3
-# wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
+wifi_t_b2<-wifi_train%>%dplyr:::filter(BUILDINGID == 2) #floors 0 to 4 
 
 ####B_near 0 variance####
 
@@ -238,10 +270,10 @@ confusionMatrix(pred_svm_l_lat, wifi_t_signal_val$LATITUDE)
 
 #### SVM_ Radial with max####
 
-# svm_r<-train(BUILDINGID~WAP_max,data=train,
-#              method= "svmRadial", trControl= ctrl,
-#              tuneLength = 20)
-# svm_r
+svm_r<-train(BUILDINGID~WAP_max,data=train,
+             method= "svmRadial", trControl= ctrl,
+             tuneLength = 20)
+svm_r
 
 #### SVM_ Polynominal with max####
 
@@ -289,6 +321,8 @@ waps_t_b1_ns<-grep("WAP", names(wifi_t_b1_ns), value = TRUE) #WAP columns wo sig
 
 wifi_t_b1_ws<-wifi_t_b1%>%
   select(-waps_t_b1_ns) #df waps w signal
+
+
 
 
 
