@@ -48,6 +48,10 @@ nowaps<-setdiff(wifi_names, waps)
 fac<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID", "BF")
 fac2<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID")
 
+wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
+wifi_t_signal_val$WAP_max_val<-as.factor(wifi_t_signal_val$WAP_max_val)
+
+
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
 wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
 
@@ -140,11 +144,17 @@ wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 wifi_t_signal$WAP_max_value<-WAP_max_value
 
 #validation#
-WAP_max_val<- apply(wifi_t_signal_val[waps_ws], 1, function(x) names(which.max(x)))
-WAP_max_value_val<-apply(wifi_t_signal_val[waps_ws], 1, function(x) max(x))
+new_waps<-setdiff(waps_ws, errors_max_value)
+WAP_max_val<- apply(wifi_t_signal_val[new_waps], 1, function(x) names(which.max(x)))
+
+WAP_max_value_val<-apply(wifi_t_signal_val[new_waps], 1, function(x) max(x))
+
+errors_max_value%in%WAP_max_value_val_test
 
 wifi_t_signal_val$WAP_max<-WAP_max_val #new colum with max values name colums
 wifi_t_signal_val$WAP_max_value<-WAP_max_value_val
+
+wifi_t_signal_val$WAP_max<-as.factor(wifi_t_signal_val$WAP_max)
 
 
 ####B_subset by building####
@@ -246,7 +256,7 @@ svm_l_B_6<-readRDS("svm_l_B_6.rds") #by BUILDING#
 # svm_l_lon<-readRDS("svm_l_lon.rds") #by latitude# RMSE 65.
 
 pred_svm_l_B_6<-predict(svm_l_B_6, wifi_t_signal_val)
-confusionMatrix(svm_l_B_6, wifi_t_signal_val$BUILDINGID)
+confusionMatrix(pred_svm_l_B_6, wifi_t_signal_val$BUILDINGID)
 # 
 # pred_svm_l_f<-predict(svm_l_f, wifi_t_signal_val)
 # confusionMatrix(pred_svm_l_f, wifi_t_signal_val$BF)
