@@ -12,6 +12,7 @@ library(caret)
 library(doParallel)
 library(randomForest)
 library(gg3D)
+library(plotly)
 
 #### A._ SETTING FILES####
 
@@ -32,6 +33,8 @@ rm(wifi_train_o, wifi_validation_o)
 
 ####NEW ATTRIBUTES####
 
+#Floor & Building combinated#
+
 wifi_train$BF<-paste0("B", wifi_train$BUILDINGID, "F", wifi_train$FLOOR)
 wifi_validation$BF<-paste0("B", wifi_validation$BUILDINGID, "F", wifi_validation$FLOOR)
 
@@ -48,9 +51,6 @@ nowaps<-setdiff(wifi_names, waps)
 fac<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID", "BF")
 fac2<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID")
 
-wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
-wifi_t_signal_val$WAP_max_val<-as.factor(wifi_t_signal_val$WAP_max_val)
-
 
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
 wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
@@ -63,9 +63,10 @@ rm(fac,fac2, wifi_names, wifi_names_v)
 wifi_train<-distinct(wifi_train)
 wifi_validation<-distinct(wifi_validation)
 
-#### kill the troll####
-wifi_train<-filter(wifi_train, USERID!=6)
+#### kill the troll####user 6 is giving but signal in 60% of his signals, as we can't trust in 
+#their registers will remove all the observations of this user#
 
+wifi_train<-filter(wifi_train, USERID!=6)
 
 ####B_changing values +100 to -110####
 # when we find values= to 100 means 
@@ -104,7 +105,7 @@ wifi_t_signal_val_names<-names(wifi_t_signal_val)
 rm(df_nowaps, df_waps, df_nowaps_val, df_waps_val, wifi_t_nosignal)
 
 
-####intersect with validation####
+####B_intersect with validation####
 
 wifi_t_signal_intersect<-intersect(wifi_t_signal_names, wifi_t_signal_val_names)
 
@@ -116,22 +117,16 @@ waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 
 
 
-####Remove vaues with les more than -30 or -0,80  NOT WORKING and KILLED user 6####
+####B_Remove vaues with les more than -30 or -0,80  NOT WORKING and KILLED user 6####
 
-# x<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x>= -0.30)))
-# 
-# y<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x-0.70)))
-# summary(x[nowaps])#if not killed u can see the troll user#
-# 
-# wifi_t_signal%>%filter(USERID==6)%>%count()
-# 
-# 
-# barplot(table(wifi_train$USERID))
 
-###column BF####
+#x<-wifi_t_signal %>% filter(apply(wifi_t_signal[waps_ws],1,function(x)any(x>=-30)))
 
-#####colums with max signal MAX WAP & MAX SIGNAL####
-#train#
+
+
+##### ~~~~~~~C_Colums with max signal MAX WAP & MAX SIGNAL~~~~~||||||||####
+
+#C_train max signal####
 waps_ws<-grep("WAP", names(wifi_t_signal), value = TRUE)
 
 
@@ -143,18 +138,51 @@ anyNA(WAP_max)
 wifi_t_signal$WAP_max<-WAP_max #new colum with max values name colums
 wifi_t_signal$WAP_max_value<-WAP_max_value
 
-#validation#
-new_waps<-setdiff(waps_ws, errors_max_value)
-WAP_max_val<- apply(wifi_t_signal_val[new_waps], 1, function(x) names(which.max(x)))
+y<-wifi_t_signal %>% filter(apply(wifi_t_signal["WAP_max"],1,function(x)max(x==-96)))
 
-WAP_max_value_val<-apply(wifi_t_signal_val[new_waps], 1, function(x) max(x))
+#### FILTER BAD SIGNAL####
 
-errors_max_value%in%WAP_max_value_val_test
+# bad_30<-wifi_t_signal %>%
+#   filter(WAP_max_value >= -30)
+# 
+# bad_80<-wifi_t_signal %>%
+#   filter(WAP_max_value <= -80)
+  
+
+
+# C_WAP Error detected modeling MAX VALUE####
+#e values not trained and detected as maximum in the validation data set#
+errors_max_value<-c("WAP138", "WAP144", "WAP268", "WAP323", "WAP481")
+
+#creating a new vector of waps useful for the validation data set#
+
+waps_ws_woe<-setdiff(waps_ws, errors_max_value)
+
+#creating new max values for validation#
+
+WAP_max_val<- apply(wifi_t_signal_val[waps_ws_woe], 1, function(x) names(which.max(x)))
+
+WAP_max_value_val<-apply(wifi_t_signal_val[waps_ws_woe], 1, function(x) max(x))
+
+
+#add column with the columns error# and plot#
+wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val%in%errors_max_value, "error", "noerror"))
+
+#plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
+
+
+
+#this waps are in the validation df not in the train#
+errors_max_value%in%WAP_max_val
+errors_max_value %in% WAP_max
 
 wifi_t_signal_val$WAP_max<-WAP_max_val #new colum with max values name colums
 wifi_t_signal_val$WAP_max_value<-WAP_max_value_val
 
+#as factor for train the models#
 wifi_t_signal_val$WAP_max<-as.factor(wifi_t_signal_val$WAP_max)
+wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
+
 
 
 ####B_subset by building####
@@ -187,19 +215,21 @@ rm(cl, partition)
 ctrl<-trainControl(method="repeatedcv", number = 10, repeats = 3, allowParallel = TRUE)
 
 
-
-
 #### KNN with max####
 
-# system.time(knn_B_6<-train(BUILDINGID~WAP_max_value,data=wifi_t_signal,
-#            method= "knn", trControl= ctrl,
-#            tuneLength = 10))
-# #           allowPallowParalel=TRUE))
-# 
+# system.time(knn_B_6<-train(BUILDINGID~WAP_max,
+#                            data=wifi_t_signal,
+#                            method= "knn", 
+#                            trControl= ctrl))
+
+#Error in e$fun(obj, substitute(ex), parent.frame(), e$data) : 
+# worker initialization failed: list(Accuracy = NA, Kappa = NA, .cell1 = 0, .cell2 = 0, .cell3 = 0, .cell4 = 0, .cell5 = 0, .cell6 = 0, .cell7 = 0, .cell8 = 0, .cell9 = 0, k = 9, Resample = "Fold07.Rep1")NULLNULL
+# Timing stopped at: 1.25 0.97 19
+
 # knn_B_6
 # 
-#saveRDS(knn_B_6, file = "knn_B_6.rds")
-knn_B_6<-readRDS("knn_B_6.rds")
+# saveRDS(knn_B_6, file = "knn_B_6.rds")
+#knn_B_6<-readRDS("knn_B_6.rds")
 # 
 # knn_BF_6<-readRDS("knn_BF_6.rds")
 # 
@@ -208,87 +238,75 @@ knn_B_6<-readRDS("knn_B_6.rds")
 # saveRDS(knn_lon_6, file = "knn_lon_6.rds")
 # knn_lon_6<-readRDS("knn_lon_6.rds")
 # 
-knn_pred_B_6<-predict(knn_B_6, wifi_t_signal_val)
-confusionMatrix(knn_pred_B_6, wifi_t_signal_val$BUILDINGID)
+# knn_pred_B_6<-predict(knn_B_6, wifi_t_signal_val)
+# confusionMatrix(knn_pred_B_6, wifi_t_signal_val$BUILDINGID)
 
-#### SVM_ LINEAR with max#### 
+##### ~~~~ SVM_ LINEAR with max#### 
 
 # svm_tune <- tune(svm, train.x=train$WAP_max, 
 #                  data = train, 
 #                  kernel="radial", 
 #                  ranges=list(cost=10^(-2:2), gamma=2^(-2:2)))
 
-# system.time(svm_l_B_6<-train(BUILDINGID~WAP_max,data=wifi_t_signal, #aplicado en el train completo#
-#            method= "svmLinear", trControl= ctrl,
-#            tuneLength = 20))
-# svm_l_B_6
+wifi_t_signal_val$LATITUDE<-as.integer(wifi_t_signal_val$LATITUDE)
+wifi_t_signal$LATITUDE<-as.integer(wifi_t_signal$LATITUDE)
 
-#e values not trained and detected as maximum in the validation data set#
-errors_max_value<-c("WAP138", "WAP144", "WAP268", "WAP323", "WAP481")
 
-#this waps are in the validation df not in the train#
-eincluded<-errors_max_value %in% WAP_max
-
-#rows with max values not trained as maximun in the validation data set#12#
-validation_error<-wifi_t_signal_val%>%dplyr::filter(WAP_max%in%errors_max_value)
-
-#add column with the columns error# and plot#
-wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val%in%errors_max_value, "error", "noerror"))
-
-plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
-
-#dataframe with the rows with errors in the max values## #remove colums?
-
-# training_error<--wifi_t_signal%>%dplyr::filter(WAP_max%in%errors_max_value)
+# system.time(svm_l_LAT_6<-train(y=wifi_t_signal$LATITUDE,
+#                                x=wifi_t_signal[c("BUILDINGID", waps_ws)], #aplicado en el train completo#
+#            method= "svmLinear"))
+# svm_l_LAT_6
 # 
-# setdiff()
+# system.time(svm_r_LON_6<-train(LONGITUDE~WAP_max,data=wifi_t_signal, #aplicado en el train completo#
+#                                method= "svmRadial"
+#                                # ,trControl= ctrl
+#                                ))
+# svm_r_LON_6
 
-saveRDS(svm_l_B_6, file = "svm_l_B_6.rds")
+
+# saveRDS(svm_l_B_6, file = "svm_l_B_6.rds")
 svm_l_B_6<-readRDS("svm_l_B_6.rds") #by BUILDING#
 
-# #saveRDS(svm_l, file = "svm_l.rds")
-# svm_l<-readRDS("svm_l.rds") #by building# 0,99
-# 
-# #saveRDS(svm_l_lat, file="svm_l_lat.rds")
-# svm_l_lat<-readRDS("svm_l_lat.rds") #by latitude# RMSE 65.
-# 
-# #saveRDS(svm_l_lon, file="svm_l_lon.rds")
-# svm_l_lon<-readRDS("svm_l_lon.rds") #by latitude# RMSE 65.
+#saveRDS(svm_l_F_6, file = "svm_l_F_6.rds")
+svm_l_F_6<-readRDS("svm_l_F_6.rds")
 
-pred_svm_l_B_6<-predict(svm_l_B_6, wifi_t_signal_val)
-confusionMatrix(pred_svm_l_B_6, wifi_t_signal_val$BUILDINGID)
-# 
-# pred_svm_l_f<-predict(svm_l_f, wifi_t_signal_val)
-# confusionMatrix(pred_svm_l_f, wifi_t_signal_val$BF)
+#saveRDS(svm_l_BF_6, file = "svm_l_BF_6.rds")
+svm_l_BF_6<-readRDS("svm_l_BF_6.rds")
 
-# pred_svm_l_lat<-predict(svm_l_lat, wifi_t_signal_val)
-# confusionMatrix(pred_svm_l_lat, wifi_t_signal_val$LATITUDE)
-# 
-# #### SVM_ Radial with max####
-# 
-# svm_r<-train(BUILDINGID~WAP_max,data=train,
-#              method= "svmRadial", trControl= ctrl,
-#              tuneLength = 20)
-# svm_r
+#saveRDS(svm_l_LAT_6, file = "svm_l_LAT_6.rds")
+svm_l_LAT_6<-readRDS("svm_l_LAT_6.rds")
 
-#### SVM_ Polynominal with max####
+#saveRDS(svm_l_LON_6, file = "svm_l_LON_6.rds")
+svm_l_LON_6<-readRDS("svm_l_LON_6.rds")
 
-# svm_p<-train(BUILDINGID~WAP_max,data=train,
-#              method= "svmPoly", trControl= ctrl,
-#              tuneLength = 10)
-# svm_p
 
 
 #### Random Forest with max####
 
+bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 50, plot = F)
 
-# system.time(rf_BF <- randomForest(BUILDINGID~WAP_max, 
-#                                   data = train, 
-#                                   method="rf", trControl= ctrl,
-#                                   ntree=10,
-#                                   allowParalel=TRUE))
+system.time(rf_lat<- randomForest(y=wifi_t_signal$LATITUDE,
+                                 x=wifi_t_signal[c("BUILDINGID", waps_ws)],
+                                 ntree=200, mtry = 104))
+
+rf_lat
 
 
+system.time(rf_lon <- randomForest(y=wifi_t_signal$LONGITUDE,
+                                 x=wifi_t_signal[c("BUILDINGID", waps_ws)],
+                                 ntree=50, mtry = 104))
+
+rf_lon
+
+
+#saveRDS(rf_lon, file = "rf_lon.rds")
+rf_lat<-readRDS("rf_lat.rds")
+rf_lon<-readRDS("rf_lon.rds")
+
+
+
+pred_lon_rf<-predict(rf_lon, wifi_t_signal_val)
+postResample(pred_lon_rf, wifi_t_signal_val$LONGITUDE)
 
 # rf<-train(BUILDINGID~WAP_max,data=train,
 #           method= "rf", trControl= ctrl,
@@ -320,9 +338,18 @@ stopCluster(cl)
 
 
 
-
-
 #### PLOTS ####
+# plot_ly(wifi_t_signal, type="scatter3d", x=~LATITUDE, 
+#         y=~LONGITUDE, z=~FLOOR, 
+#         marker = list(
+#           color="blue",
+#           size= 4
+#         ))%>%
+#   add_trace(troll, type="scatter3d", x=~LATITUDE, y=~LONGITUDE, z=~FLOOR, marker = list(
+#     color="red",
+#     size= 2 ))
+
+
 # theme_set(theme_light())
 # plot(wifi_train$LATITUDE, wifi_train$LONGITUDE)#
 #      
