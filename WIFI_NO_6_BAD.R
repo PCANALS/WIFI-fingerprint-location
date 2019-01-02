@@ -7,7 +7,7 @@ options(scipen=999)
 
 #### ._LIBRARIES####
 
-pacman::p_load(caret, party, reshape, ggplot2, dplyr, doParallel, gg3D, plotly, randomForest)
+pacman::p_load(caret, party, reshape, ggplot2, dplyr, doParallel, gg3D, plotly, randomForest, mlbench)
 #### A._ SETTING FILES####
 
 setwd("C:/Users/pilar/Google Drive/A_DATA/UBIQUM/TASK3.3_WIFI/task3-2-wifi-PCANALS")
@@ -65,7 +65,7 @@ wifi_train<-filter(wifi_train, USERID!=6)
 
 ####B_changing values +100 to -110####
 # when we find values= to 100 means 
-# not signal detection. In order to organize properly the bad and good signals 
+# not signal detection. In order to organize properly the bad and best signals 
 # we modify this values with a value = to not signal
 
 wifi_train[wifi_train==100]<--110
@@ -205,6 +205,9 @@ wifi_t_goodsignal<-setdiff(wifi_t_signal, bad_30)
 
 summary(wifi_t_goodsignal$WAP_max_value)
 
+wifi_t_bestsignal<-setdiff(wifi_t_goodsignal, bad_80)
+summary(wifi_t_bestsignal$WAP_max_value)
+
 
 ####B_subset by building####
 
@@ -222,10 +225,10 @@ cl<-makeCluster(3)
 doParallel:::registerDoParallel(cl)
 
 set.seed(123)
-partition<-createDataPartition(wifi_t_signal$BUILDINGID,times = 2, p = 0.1)
-
-wifi_train<-wifi_t_signal[partition$Resample1,]
-wifi_test<-wifi_t_signal[partition$Resample2,]
+# partition<-createDataPartition(wifi_t_signal$BUILDINGID,times = 2, p = 0.1)
+# 
+# wifi_train<-wifi_t_signal[partition$Resample1,]
+# wifi_test<-wifi_t_signal[partition$Resample2,]
 
 rm(cl, partition)
 
@@ -239,6 +242,8 @@ rm(cl, partition)
 
 wifi_t_signal_val$LATITUDE<-as.integer(wifi_t_signal_val$LATITUDE)
 wifi_t_signal$LATITUDE<-as.integer(wifi_t_signal$LATITUDE)
+wifi_t_bestsignal$LATITUDE<-as.integer(wifi_t_bestsignal$LATITUDE)
+wifi_t_bestsignal$LONGITUDE<-as.integer(wifi_t_bestsignal$LONGITUDE)
 
 
 # system.time(svm_l_LAT_6<-train(y=wifi_t_signal$LATITUDE,
@@ -268,21 +273,45 @@ svm_l_LAT_6<-readRDS("svm_l_LAT_6.rds")
 #saveRDS(svm_l_LON_6, file = "svm_l_LON_6.rds")
 svm_l_LON_6<-readRDS("svm_l_LON_6.rds")
 
+pred_svm_l_B_6<-predict(svm_l_B_6, wifi_t_signal_val)
+pred_svm_l_F_6<-predict(svm_l_F_6, wifi_t_signal_val)
+confusionMatrix(pred_svm_l_F_6, wifi_t_signal_val$BUILDINGID)
+
+
+confusionMatrix(pred_svm_l_B_6, wifi_t_signal_val$BUILDINGID)
+# 
+# pred_svm_l_f<-predict(svm_l_f, wifi_t_signal_val)
+# confusionMatrix(pred_svm_l_f, wifi_t_signal_val$BF)
+
+# pred_svm_l_lat<-predict(svm_l_lat, wifi_t_signal_val)
+# confusionMatrix(pred_svm_l_lat, wifi_t_signal_val$LATITUDE)
+
+svm_l_b<-readRDS("svm_l.rds")
+
+pred_svm_l_b<-predict(svm_l_b, wifi_t_signal_val)
+confusionMatrix(pred_svm_l_b, wifi_t_signal_val$BUILDINGID)
 
 
 #### Random Forest with max####
 
 #bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 200, plot = F)
 
-system.time(rf_lat<- randomForest(y=wifi_t_signal$LATITUDE,
-                                 x=wifi_t_signal[c("BUILDINGID", waps_ws)],
+system.time(rf_lon_best<- randomForest(y=wifi_t_bestsignal$LONGITUDE,
+                                 x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
                                  ntree=200, mtry = 104))
 
-rf_lat
+rf_lon_best
 
-system.time(rf_lon_good<- randomForest(y=wifi_t_goodsignal$LONGITUDE,
-                                       x=wifi_t_goodsignal[c("BUILDINGID", waps_ws)],
+
+system.time(rf_lat_best<- randomForest(y=wifi_t_bestsignal$LATITUDE,
+                                       x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
                                        ntree=200, mtry = 104))
+
+rf_lat_best
+
+# system.time(rf_lon_good<- randomForest(y=wifi_t_goodsignal$LONGITUDE,
+#                                        x=wifi_t_goodsignal[c("BUILDINGID", waps_ws)],
+#                                        ntree=200, mtry = 104))
 
 rf_lat_good
 rf_lon_good
@@ -294,24 +323,24 @@ rf_lon_good
 # rf_lon
 
 
-#saveRDS(rf_lon, file = "rf_lon.rds")
 rf_lat<-readRDS("rf_lat.rds")
+rf_lon<-readRDS("rf_lon.rds")
 
-
-#saveRDS(rf_lat_good, file = "rf_lat_good.rds")
 rf_lat_good<-readRDS("rf_lat_good.rds")
-saveRDS(rf_lon_good, file = "rf_lon_good.rds")
 rf_lon_good<-readRDS("rf_lon_good.rds")
 
-
-
-rf_lon<-readRDS("rf_lon.rds")
+#saveRDS(rf_lon_best, file = "rf_lon_best.rds")
+rf_lon_best<-readRDS("rf_lon_best.rds")
+saveRDS(rf_lat_best, file = "rf_lat_best.rds")
+rf_lat_best<-readRDS("rf_lat_best.rds")
 
 
 pred_lon_rf<-predict(rf_lon, wifi_t_signal_val)
 pred_lat_rf<-predict(rf_lat, wifi_t_signal_val)
 pred_lat_good_rf<-predict(rf_lat_good, wifi_t_signal_val)
 pred_lon_good_rf<-predict(rf_lon_good, wifi_t_signal_val)
+pred_lon_best_rf<-predict(rf_lon_best, wifi_t_signal_val)
+pred_lat_good_rf<-predict(rf_lat_best, wifi_t_signal_val)
 
 
 
@@ -319,6 +348,8 @@ postResample(pred_lon_rf, wifi_t_signal_val$LONGITUDE)
 postResample(pred_lat_rf, wifi_t_signal_val$LATITUDE)
 postResample(pred_lat_good_rf, wifi_t_signal_val$LATITUDE)
 postResample(pred_lon_good_rf, wifi_t_signal_val$LONGITUDE)
+postResample(pred_lat_best_rf, wifi_t_signal_val$LATITUDE)
+postResample(pred_lon_best_rf, wifi_t_signal_val$LONGITUDE)
 
 
 
@@ -346,9 +377,88 @@ summary(wifi_t_signal_val_pred[nowaps_pred])
 #### C.50 with max####
 #### PCA with max####
 
+####LOGISTIC REGRESION####
+
+glm_f_6 <- glm(BUILDINGID~WAP_max, data=wifi_t_signal)
 
 
-stopCluster(cl)
+glm_lat_6
+
+saveRDS(glm_lat_6, file = "glm_lat_6.rds")
+glm_lat_6<-readRDS("glm_lat_6.rds")
+glm_lon_6<-readRDS("glm_lon_6.rds")
+
+
+pred_glm_lon<-predict(glm_lon_6, wifi_t_signal_val)
+pred_glm_lat<-predict(glm_lat_6, wifi_t_signal_val)
+
+postResample(pred_glm_lon, wifi_t_signal_val$LONGITUDE)
+postResample(pred_glm_lat, wifi_t_signal_val$LATITUDE)
+
+
+glm_lat_good <- glm(LATITUDE~WAP_max, data=wifi_t_goodsignal)
+glm_lon_good <- glm(LONGITUDE~WAP_max, data=wifi_t_goodsignal)
+
+
+saveRDS(glm_lat_good, file = "glm_lat_good.rds")
+glm_lat_6<-readRDS("glm_lat_6.rds")
+glm_lon_6<-readRDS("glm_lon_6.rds")
+
+pred_glm_lat_good<-predict(glm_lat_good, wifi_t_signal_val)
+postResample(pred_glm_lat_good, wifi_t_signal_val$LATITUDE)
+
+
+#### KNN with max####
+
+#system.time(knn_lon_6<-train(LONGITUDE~WAP_max_value,data=wifi_t_signal,
+#           method= "knn"))
+
+#knn_lon_6
+
+saveRDS(knn_lon_6, file = "knn_lon_6.rds")
+
+knn_F_6<-readRDS("knn_F_6.rds")
+
+knn_B_6<-readRDS("knn_B_6.rds")
+
+knn_BF_6<-readRDS("knn_BF_6.rds")
+
+knn_lat_6<-readRDS("knn_lat_6.rds")
+
+knn_lon_6<-readRDS("knn_lon_6.rds")
+
+
+knn_pred_B_6<-predict(knn_B_6, wifi_t_signal_val)
+confusionMatrix(knn_pred_B_6, wifi_t_signal_val$BUILDINGID)
+knn_pred_F_6<-predict(knn_F_6, wifi_t_signal_val)
+confusionMatrix(knn_pred_F_6, wifi_t_signal_val$FLOOR)
+knn_pred_BF_6<-predict(knn_BF_6, wifi_t_signal_val)
+confusionMatrix(knn_pred_BF_6, wifi_t_signal_val$BF)
+knn_pred_lat_6<-predict(knn_lat_6, wifi_t_signal_val)
+confusionMatrix(knn_pred_lat_6, wifi_t_signal_val$LATITUDE)
+knn_pred_lon_6<-predict(knn_lon_6, wifi_t_signal_val)
+confusionMatrix(knn_pred_lon_6, wifi_t_signal_val$LONGITUDE)
+
+knn_F<-readRDS("knn.rds")
+
+knn_B<-readRDS("knn_B.rds")
+
+knn_BF<-readRDS("knn_BF.rds")
+
+knn_lat<-readRDS("knn_lat.rds")
+
+knn_lon<-readRDS("knn_lon.rds")
+
+knn_pred_B<-predict(knn_B, wifi_t_signal_val)
+confusionMatrix(knn_pred_B, wifi_t_signal_val$BUILDINGID)
+knn_pred_F<-predict(knn_F, wifi_t_signal_val)
+confusionMatrix(knn_pred_F, wifi_t_signal_val$FLOOR)
+knn_pred_BF<-predict(knn_BF, wifi_t_signal_val)
+confusionMatrix(knn_pred_BF, wifi_t_signal_val$BF)
+knn_pred_lat<-predict(knn_lat, wifi_t_signal_val)
+confusionMatrix(knn_pred_lat, wifi_t_signal_val$LATITUDE)
+knn_pred_lon<-predict(knn_lon, wifi_t_signal_val)
+confusionMatrix(knn_pred_lon, wifi_t_signal_val$LONGITUDE)
 
 
 
@@ -364,7 +474,7 @@ stopCluster(cl)
 # wifi_t_b1_ws<-wifi_t_b1%>%
 #   select(-waps_t_b1_ns) #df waps w signal
 
-
+stopCluster(cl)
 
 #### PLOTS ####
 # plot_ly(wifi_t_signal, type="scatter3d", x=~LATITUDE, 
