@@ -3,17 +3,11 @@
 rm(list = ls())
 
 Sys.setlocale(category = "LC_ALL", locale = "english")
-
+options(scipen=999)
 
 #### ._LIBRARIES####
-library(dplyr)
-library(ggplot2)
-library(caret)
-library(doParallel)
-library(randomForest)
-library(gg3D)
-library(plotly)
 
+pacman::p_load(caret, party, reshape, ggplot2, dplyr, doParallel, gg3D, plotly, randomForest)
 #### A._ SETTING FILES####
 
 setwd("C:/Users/pilar/Google Drive/A_DATA/UBIQUM/TASK3.3_WIFI/task3-2-wifi-PCANALS")
@@ -148,15 +142,8 @@ bad_30<-wifi_t_signal %>%
 
 bad_80<-wifi_t_signal %>%
   filter(WAP_max_value <= -80)
-  
+ 
 
-bad_30_val<-wifi_t_signal_val %>%
-  filter(WAP_max_value >= -30)
-
-bad_80_val<-wifi_t_signal_val %>%
-  filter(WAP_max_value <= -80)
-
-summary(bad_80_val[nowaps])
 
 
 # C_WAP Error detected modeling MAX VALUE####
@@ -193,6 +180,30 @@ wifi_t_signal_val$WAP_max_value<-WAP_max_value_val
 wifi_t_signal_val$WAP_max<-as.factor(wifi_t_signal_val$WAP_max)
 wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
 
+####validation bad signal#### NO THERE ARE BAD SIGNAL IN THE VALIDATION SETN
+bad_30_val<-wifi_t_signal_val %>%
+  filter(WAP_max_value >= -30)
+
+
+
+bad_80_val<-wifi_t_signal_val %>%
+  filter(WAP_max_value <= -80)
+
+
+n_occur <- data.frame(table(bad_80_val$WAP_max))
+n_occur[n_occur$Freq > 1,]
+
+n_occur2 <- data.frame(table(bad_80$WAP_max))
+n_occur2[n_occur2$Freq > 10,]
+
+
+
+summary(bad_80_val[nowaps])
+
+
+wifi_t_goodsignal<-setdiff(wifi_t_signal, bad_30)
+
+summary(wifi_t_goodsignal$WAP_max_value)
 
 
 ####B_subset by building####
@@ -222,41 +233,9 @@ rm(cl, partition)
 # qplot(x = LATITUDE, y = LONGITUDE, data = wifi_train)
 # qplot(x = LATITUDE, y = LONGITUDE, data = train)
 
-ctrl<-trainControl(method="repeatedcv", number = 10, repeats = 3, allowParallel = TRUE)
+#ctrl<-trainControl(method="repeatedcv", number = 10, repeats = 3, allowParallel = TRUE)
 
 
-#### KNN with max####
-
-# system.time(knn_B_6<-train(BUILDINGID~WAP_max,
-#                            data=wifi_t_signal,
-#                            method= "knn", 
-#                            trControl= ctrl))
-
-#Error in e$fun(obj, substitute(ex), parent.frame(), e$data) : 
-# worker initialization failed: list(Accuracy = NA, Kappa = NA, .cell1 = 0, .cell2 = 0, .cell3 = 0, .cell4 = 0, .cell5 = 0, .cell6 = 0, .cell7 = 0, .cell8 = 0, .cell9 = 0, k = 9, Resample = "Fold07.Rep1")NULLNULL
-# Timing stopped at: 1.25 0.97 19
-
-# knn_B_6
-# 
-# saveRDS(knn_B_6, file = "knn_B_6.rds")
-#knn_B_6<-readRDS("knn_B_6.rds")
-# 
-# knn_BF_6<-readRDS("knn_BF_6.rds")
-# 
-# knn_lat_6<-readRDS("knn_lat_6.rds")
-# 
-# saveRDS(knn_lon_6, file = "knn_lon_6.rds")
-# knn_lon_6<-readRDS("knn_lon_6.rds")
-# 
-# knn_pred_B_6<-predict(knn_B_6, wifi_t_signal_val)
-# confusionMatrix(knn_pred_B_6, wifi_t_signal_val$BUILDINGID)
-
-##### ~~~~ SVM_ LINEAR with max#### 
-
-# svm_tune <- tune(svm, train.x=train$WAP_max, 
-#                  data = train, 
-#                  kernel="radial", 
-#                  ranges=list(cost=10^(-2:2), gamma=2^(-2:2)))
 
 wifi_t_signal_val$LATITUDE<-as.integer(wifi_t_signal_val$LATITUDE)
 wifi_t_signal$LATITUDE<-as.integer(wifi_t_signal$LATITUDE)
@@ -301,6 +280,12 @@ system.time(rf_lat<- randomForest(y=wifi_t_signal$LATITUDE,
 
 rf_lat
 
+system.time(rf_lon_good<- randomForest(y=wifi_t_goodsignal$LONGITUDE,
+                                       x=wifi_t_goodsignal[c("BUILDINGID", waps_ws)],
+                                       ntree=200, mtry = 104))
+
+rf_lat_good
+rf_lon_good
 
 # system.time(rf_lon <- randomForest(y=wifi_t_signal$LONGITUDE,
 #                                  x=wifi_t_signal[c("BUILDINGID", waps_ws)],
@@ -313,12 +298,43 @@ rf_lat
 rf_lat<-readRDS("rf_lat.rds")
 
 
+#saveRDS(rf_lat_good, file = "rf_lat_good.rds")
+rf_lat_good<-readRDS("rf_lat_good.rds")
+saveRDS(rf_lon_good, file = "rf_lon_good.rds")
+rf_lon_good<-readRDS("rf_lon_good.rds")
+
+
+
 rf_lon<-readRDS("rf_lon.rds")
 
 
-
 pred_lon_rf<-predict(rf_lon, wifi_t_signal_val)
+pred_lat_rf<-predict(rf_lat, wifi_t_signal_val)
+pred_lat_good_rf<-predict(rf_lat_good, wifi_t_signal_val)
+pred_lon_good_rf<-predict(rf_lon_good, wifi_t_signal_val)
+
+
+
 postResample(pred_lon_rf, wifi_t_signal_val$LONGITUDE)
+postResample(pred_lat_rf, wifi_t_signal_val$LATITUDE)
+postResample(pred_lat_good_rf, wifi_t_signal_val$LATITUDE)
+postResample(pred_lon_good_rf, wifi_t_signal_val$LONGITUDE)
+
+
+
+
+
+
+wifi_t_signal_val_pred<-wifi_t_signal_val
+
+wifi_t_signal_val_pred$LATITUDE_PRED<-pred_lat_rf
+
+waps_pred<-grep("WAP", names(wifi_t_signal_val_pred), value = TRUE)
+
+nowaps_pred<-setdiff(names(wifi_t_signal_val_pred), waps_pred)
+
+summary(wifi_t_signal_val_pred[nowaps_pred])
+
 
 # rf<-train(BUILDINGID~WAP_max,data=train,
 #           method= "rf", trControl= ctrl,

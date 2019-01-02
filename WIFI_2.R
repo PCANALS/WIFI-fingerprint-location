@@ -124,7 +124,8 @@ str(troll$WAP_max_value)
 
 ####Remove vaues with les more than -30####
 
-x<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(x>= -0.30)))
+x<-wifi_t_signal%>%filter(apply(wifi_t_signal[waps_ws],1, function(x) any(wifi_t_signal  %in% seq(-.3, 0, by=0,01))))
+                                
 t<-troll%>%filter(apply(troll[waps_ws],1, function(x) any(x>= -0.30)))
 
 table(x == t, useNA = 'ifany')
@@ -366,6 +367,22 @@ ggplot(wifi_t_signal_val, aes(x=BF))+
 
 
 #268, 323
+
+
+plot_ly(wifi_t_signal, type="scatter3d", x=~LATITUDE, 
+        y=~LONGITUDE, z=~FLOOR, 
+        marker = list(
+          color="blue",
+          size= 4
+        ))%>%
+  add_trace(troll, type="scatter3d", x=~LATITUDE, y=~LONGITUDE, z=~FLOOR, marker = list(
+    color="red",
+    size= 2 ))
+
+plot_ly(troll, x=~LATITUDE, y=~LONGITUDE, z=~FLOOR, 
+        marker = list(
+  color="red",
+  size= 20)
 
 #tab<-tableplot(wifi_t_b1, plot = FALSE)
 

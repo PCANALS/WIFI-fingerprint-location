@@ -283,24 +283,26 @@ svm_l_LON_6<-readRDS("svm_l_LON_6.rds")
 
 #### Random Forest with max####
 
-bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 50, plot = F)
+bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 200, plot = F)
 
-system.time(rf_lat<- randomForest(y=wifi_t_signal$LATITUDE,
-                                 x=wifi_t_signal[c("BUILDINGID", waps_ws)],
-                                 ntree=200, mtry = 104))
+# system.time(rf_lat<- randomForest(y=wifi_t_signal$LATITUDE,
+#                                  x=wifi_t_signal[c("BUILDINGID", waps_ws)],
+#                                  ntree=200, mtry = 104))
+# 
+# rf_lat
 
-rf_lat
 
-
-system.time(rf_lon <- randomForest(y=wifi_t_signal$LONGITUDE,
-                                 x=wifi_t_signal[c("BUILDINGID", waps_ws)],
-                                 ntree=50, mtry = 104))
-
-rf_lon
+# system.time(rf_lon <- randomForest(y=wifi_t_signal$LONGITUDE,
+#                                  x=wifi_t_signal[c("BUILDINGID", waps_ws)],
+#                                  ntree=50, mtry = 104))
+# 
+# rf_lon
 
 
 #saveRDS(rf_lon, file = "rf_lon.rds")
 rf_lat<-readRDS("rf_lat.rds")
+
+
 rf_lon<-readRDS("rf_lon.rds")
 
 
