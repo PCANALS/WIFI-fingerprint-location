@@ -44,13 +44,12 @@ all.equal(wifi_names, wifi_names_v) #columns in validation and in train are the 
 waps<-grep("WAP", names(wifi_train), value = TRUE)
 nowaps<-setdiff(wifi_names, waps)
 fac<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID", "BF")
-fac2<-c("FLOOR", "BUILDINGID", "SPACEID","RELATIVEPOSITION", "USERID", "PHONEID")
 
 
 wifi_train[fac] <- lapply(wifi_train[fac], as.factor) 
 wifi_validation[fac] <- lapply(wifi_validation[fac], as.factor) 
 
-rm(fac,fac2, wifi_names, wifi_names_v)
+rm(fac, wifi_names, wifi_names_v)
 #### B._ SUBSETS####
 
 
@@ -164,7 +163,7 @@ WAP_max_value_val<-apply(wifi_t_signal_val[waps_ws_woe], 1, function(x) max(x))
 #add column with the columns error# and plot#
 wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val%in%errors_max_value, "error", "noerror"))
 
-#plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
+plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
 plot_ly(bad_80_val, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~BUILDINGID)
 
 summary(bad_80_val[nowaps])
@@ -296,18 +295,18 @@ confusionMatrix(pred_svm_l_b, wifi_t_signal_val$BUILDINGID)
 
 #bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 200, plot = F)
 
-system.time(rf_lon_best<- randomForest(y=wifi_t_bestsignal$LONGITUDE,
-                                 x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
-                                 ntree=200, mtry = 104))
+# system.time(rf_lon_best<- randomForest(y=wifi_t_bestsignal$LONGITUDE,
+#                                  x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
+#                                  ntree=200, mtry = 104))
+# 
+# rf_lon_best
 
-rf_lon_best
 
-
-system.time(rf_lat_best<- randomForest(y=wifi_t_bestsignal$LATITUDE,
-                                       x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
-                                       ntree=200, mtry = 104))
-
-rf_lat_best
+# system.time(rf_lat_best<- randomForest(y=wifi_t_bestsignal$LATITUDE,
+#                                        x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
+#                                        ntree=200, mtry = 104))
+# 
+# rf_lat_best
 
 # system.time(rf_lon_good<- randomForest(y=wifi_t_goodsignal$LONGITUDE,
 #                                        x=wifi_t_goodsignal[c("BUILDINGID", waps_ws)],
@@ -354,11 +353,52 @@ postResample(pred_lon_best_rf, wifi_t_signal_val$LONGITUDE)
 
 
 
-
+####PLOTLY####
 
 wifi_t_signal_val_pred<-wifi_t_signal_val
 
-wifi_t_signal_val_pred$LATITUDE_PRED<-pred_lat_rf
+wifi_t_signal_val_pred$LATITUDE<-pred_lat_rf
+wifi_t_signal_val_pred$LONGITUDE<-pred_lon_rf
+wifi_t_signal_val_pred$FLOOR<-pred_svm_l_F_6
+
+wifi_t_signal_val_pred$PREDICTED<-"pred"
+wifi_t_signal_val$PREDICTED<-"real"
+
+dim3d<-c("LATITUDE", "LONGITUDE", "FLOOR", "PREDICTED")
+
+#with dplyr union we see that there are same values)#
+df_plot<-rbind(wifi_t_signal_val[dim3d], wifi_t_signal_val_pred[dim3d])
+
+pal <- c("#1289d7", "#ff0000", "#ffa500")
+plot_ly(df_plot, x=~LATITUDE,y=~LONGITUDE, colors= pal,type = "scatter3d",
+        z= ~FLOOR, color=~PREDICTED, mode="markers", size = 1)
+
+pal <- c("#1289d7", "#00008b", "#ff0000", "#ffa500")
+
+
+
+plot_ly(type = "scatter3d", colors = pal ) %>% 
+  add_trace(data=wifi_t_signal_val,
+            x = ~LATITUDE,
+            y = ~LONGITUDE,
+            z = ~FLOOR,
+            color = ~PREDICTED,
+            mode="markers", sizes= 2) %>%
+  add_trace(data=wifi_t_signal_val_pred,
+            x = ~LATITUDE,
+            y = ~LONGITUDE,
+            z = ~FLOOR,
+            mode="markers",
+            color = ~PREDICTED) %>%
+  # add_trace(data=df_plot, 
+  #           x = ~LATITUDE,
+  #           y = ~LONGITUDE, 
+  #           z = ~FLOOR, 
+  #           mode = "lines",
+  #           color = ~PREDICTED)
+
+
+
 
 waps_pred<-grep("WAP", names(wifi_t_signal_val_pred), value = TRUE)
 
