@@ -322,21 +322,61 @@ svm_l_lon<-readRDS("svm_l_lon.rds")
 
 pred_svm_l_b<-predict(svm_l_b, wifi_t_signal_val)
 confusionMatrix(pred_svm_l_b, wifi_t_signal_val$BUILDINGID)
-pred_svm_l_f<-predict(svm_l_f, wifi_t_signal_val)
-confusionMatrix(pred_svm_l_f, wifi_t_signal_val$FLOOR)
-pred_svm_l_lat<-predict(svm_l_lat, wifi_t_signal_val)
-confusionMatrix(pred_svm_l_lat, wifi_t_signal_val$LATITUDE)
+#pred_svm_l_f<-predict(svm_l_f, wifi_t_signal_val) #not works
+#confusionMatrix(pred_svm_l_f, wifi_t_signal_val$FLOOR)
+#pred_svm_l_lat<-predict(svm_l_lat, wifi_t_signal_val)
+#confusionMatrix(pred_svm_l_lat, wifi_t_signal_val$LATITUDE)
+
+
 
 #### Random Forest with max####
 
-#bestmtry = tuneRF(x=wifi_t_signal[c("BUILDINGID", waps_ws)], y=wifi_t_signal$LONGITUDE, ntreeTry = 200, plot = F)
+# bestmtry = tuneRF(x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
+#                   y=wifi_t_bestsignal$BF, ntreeTry = 25, plot = F)
 
-# system.time(rf_lon_best<- randomForest(y=wifi_t_bestsignal$LONGITUDE,
-#                                  x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
-#                                  ntree=200, mtry = 104))
-# 
-# rf_lon_best
 
+system.time(rf_B_best<- randomForest(y=wifi_t_bestsignal$BUILDINGID,
+                                 x=wifi_t_bestsignal[waps_ws],
+                                 ntree=25, mtry = 17))
+
+rf_B_6
+saveRDS(rf_B_6, file = "rf_B_6.rds")
+rf_B_6<-readRDS("rf_B_6.rds")
+rf_F_6<-readRDS("rf_F_6.rds") #FLOOR 4 WITHOUT ERROR#
+rf_BF_6<-readRDS("rf_BF_6.rds") 
+rf_BF_good<-readRDS("rf_BF_good.rds")
+rf_F_good<-readRDS("rf_F_good.rds")
+rf_B_good<-readRDS("rf_B_good.rds")
+rf_BF_best<-readRDS("rf_BF_best.rds")
+rf_F_best<-readRDS("rf_F_best.rds")
+rf_B_best<-readRDS("rf_B_best.rds")
+
+pred_rf_B_6<-predict(rf_B_6, wifi_t_signal_val)
+confusionMatrix(pred_rf_B_6, wifi_t_signal_val$BUILDINGID)
+
+pred_rf_F_6<-predict(rf_F_6, wifi_t_signal_val)
+confusionMatrix(pred_rf_F_6, wifi_t_signal_val$FLOOR)
+
+pred_rf_BF_6<-predict(rf_BF_6, wifi_t_signal_val)
+confusionMatrix(pred_rf_BF_6, wifi_t_signal_val$BF)
+
+pred_rf_BF_good<-predict(rf_BF_good, wifi_t_signal_val)
+confusionMatrix(pred_rf_BF_good, wifi_t_signal_val$BF)
+
+pred_rf_F_good<-predict(rf_F_good, wifi_t_signal_val)
+confusionMatrix(pred_rf_F_good, wifi_t_signal_val$FLOOR)
+
+pred_rf_B_good<-predict(rf_B_good, wifi_t_signal_val)
+confusionMatrix(pred_rf_B_good, wifi_t_signal_val$BUILDINGID)
+
+pred_rf_BF_best<-predict(rf_BF_best, wifi_t_signal_val)
+confusionMatrix(pred_rf_BF_best, wifi_t_signal_val$BF)
+
+pred_rf_F_best<-predict(rf_F_best, wifi_t_signal_val)
+confusionMatrix(pred_rf_F_best, wifi_t_signal_val$FLOOR)
+
+pred_rf_B_best<-predict(rf_B_best, wifi_t_signal_val)
+confusionMatrix(pred_rf_B_best, wifi_t_signal_val$BUILDINGID)
 
 # system.time(rf_lat_best<- randomForest(y=wifi_t_bestsignal$LATITUDE,
 #                                        x=wifi_t_bestsignal[c("BUILDINGID", waps_ws)],
@@ -361,8 +401,11 @@ rf_lon_good
 rf_lat<-readRDS("rf_lat.rds")
 rf_lon<-readRDS("rf_lon.rds")
 
+
 rf_lat_good<-readRDS("rf_lat_good.rds")
 rf_lon_good<-readRDS("rf_lon_good.rds")
+rf_lat_good
+rf_lon_good
 
 #saveRDS(rf_lon_best, file = "rf_lon_best.rds")
 rf_lon_best<-readRDS("rf_lon_best.rds")
@@ -375,7 +418,7 @@ pred_lat_rf<-predict(rf_lat, wifi_t_signal_val)
 pred_lat_good_rf<-predict(rf_lat_good, wifi_t_signal_val)
 pred_lon_good_rf<-predict(rf_lon_good, wifi_t_signal_val)
 pred_lon_best_rf<-predict(rf_lon_best, wifi_t_signal_val)
-pred_lat_good_rf<-predict(rf_lat_best, wifi_t_signal_val)
+pred_lat_best_rf<-predict(rf_lat_best, wifi_t_signal_val)
 
 
 
