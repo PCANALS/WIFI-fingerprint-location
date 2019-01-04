@@ -191,7 +191,7 @@ wifi_t_signal<-filter(wifi_t_signal, USERID!=6)
 # values not trained and detected as maximum in the validation data set#
 
 error<-wifi_t_signal_val$WAP_max%in%wifi_t_signal$WAP_max
-df<-distinct(filter(data.frame(z, wifi_t_signal_val$WAP_max), error=="FALSE"))
+df<-distinct(filter(data.frame(error, wifi_t_signal_val$WAP_max), error=="FALSE"))
 
 errors_max_validation<-c("WAP138", "WAP144", "WAP268", "WAP323", "WAP481")
 
@@ -235,6 +235,7 @@ wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
 
 wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val%in%errors_max_validation, "error", "noerror"))
 
+plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
 
 plot_ly(type = "scatter3d", mode="markers", 
         wifi_t_signal_val_e,
@@ -335,12 +336,12 @@ confusionMatrix(pred_svm_l_b, wifi_t_signal_val$BUILDINGID)
 #                   y=wifi_t_bestsignal$BF, ntreeTry = 25, plot = F)
 
 
-system.time(rf_B_best<- randomForest(y=wifi_t_bestsignal$BUILDINGID,
-                                 x=wifi_t_bestsignal[waps_ws],
-                                 ntree=25, mtry = 17))
+# system.time(rf_B_best<- randomForest(y=wifi_t_bestsignal$BUILDINGID,
+#                                  x=wifi_t_bestsignal[waps_ws],
+#                                  ntree=25, mtry = 17))
 
 rf_B_6
-saveRDS(rf_B_6, file = "rf_B_6.rds")
+#saveRDS(rf_B_6, file = "rf_B_6.rds")
 rf_B_6<-readRDS("rf_B_6.rds")
 rf_F_6<-readRDS("rf_F_6.rds") #FLOOR 4 WITHOUT ERROR#
 rf_BF_6<-readRDS("rf_BF_6.rds") 
@@ -409,7 +410,7 @@ rf_lon_good
 
 #saveRDS(rf_lon_best, file = "rf_lon_best.rds")
 rf_lon_best<-readRDS("rf_lon_best.rds")
-saveRDS(rf_lat_best, file = "rf_lat_best.rds")
+#saveRDS(rf_lat_best, file = "rf_lat_best.rds")
 rf_lat_best<-readRDS("rf_lat_best.rds")
 
 
@@ -448,9 +449,9 @@ df_plot<-rbind(wifi_t_signal_val[dim3d], wifi_t_signal_val_pred[dim3d])
 
 pal <- c("#1289d7", "#ff0000", "#ffa500")
 plot_ly(df_plot, x=~LATITUDE,y=~LONGITUDE, colors= pal,type = "scatter3d",
-        z= ~FLOOR, color=~PREDICTED, mode="markers", size = 1)
+        z= ~FLOOR, color=~PREDICTED, mode="markers", size = 1, sizes=3)
 
-pal <- c("#1289d7", "#00008b", "#ff0000", "#ffa500")
+pal <- c("#1289d7", "#00008b")
 
 
 
@@ -459,14 +460,12 @@ plot_ly(type = "scatter3d", colors = pal ) %>%
             x = ~LATITUDE,
             y = ~LONGITUDE,
             z = ~FLOOR,
-            color = ~PREDICTED,
             mode="markers", sizes= 2) %>%
   add_trace(data=wifi_t_signal_val_pred,
             x = ~LATITUDE,
             y = ~LONGITUDE,
             z = ~FLOOR,
-            mode="markers",
-            color = ~PREDICTED) %>%
+            mode="markers") %>%
   # add_trace(data=df_plot, 
   #           x = ~LATITUDE,
   #           y = ~LONGITUDE, 
