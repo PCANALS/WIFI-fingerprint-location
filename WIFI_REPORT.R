@@ -430,8 +430,6 @@ postResample(pred_lat_best_rf, wifi_t_signal_val$LATITUDE)
 postResample(pred_lon_best_rf, wifi_t_signal_val$LONGITUDE)
 
 
-
-
 ####PLOTLY####
 
 wifi_t_signal_val_pred<-wifi_t_signal_val
