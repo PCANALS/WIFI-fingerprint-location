@@ -8,6 +8,7 @@ options(scipen=999)
 #### ._LIBRARIES####
 
 pacman::p_load(caret, party, reshape, ggplot2, dplyr, doParallel, gg3D, plotly, randomForest, mlbench)
+
 #### A._ SETTING FILES####
 
 setwd("C:/Users/pilar/Google Drive/A_DATA/UBIQUM/TASK3.3_WIFI/task3-2-wifi-PCANALS")
@@ -143,13 +144,14 @@ bad_30<-wifi_t_signal %>%
 
 
 summary(bad_30[nowaps]) #detected 2 users(6 -392and 14-54) not registering correct observations#
-ggplot(bad_30, aes(x=USERID))+ geom_bar()
+ggplot(bad_30, aes(x=USERID))+ geom_bar( fill="darkslategrey")+
+  labs(title = "Frecuency of bad signal by User")
 
 bad_80<-wifi_t_signal %>%
   filter(WAP_max_value <= -80)
 
 summary(bad_80[nowaps])
-ggplot(bad_80, aes(x=USERID))+ geom_bar()
+ggplot(bad_80, aes(x=USERID))+ geom_bar(fill="coral1")+  labs(title = "Frecuency of bad signal by User")
 
 summary(filter(bad_80[nowaps], USERID==6)) #only 2 bad observatios
 
@@ -234,9 +236,11 @@ wifi_t_signal$WAP_max<-as.factor(wifi_t_signal$WAP_max)
 #add column with the columns error# and plot#
 
 wifi_t_signal_val_e<-wifi_t_signal_val%>%dplyr::mutate(error= ifelse(WAP_max_val%in%errors_max_validation, "error", "noerror"))
+wifi_t_signal_val_e$error<-as.factor(wifi_t_signal_val_e$error)
 
 plot_ly(wifi_t_signal_val_e, x=~LATITUDE,y=~LONGITUDE, z= ~FLOOR, color=~error)
 
+unique(wifi_t_signal_val_e$error)
 plot_ly(type = "scatter3d", mode="markers", 
         wifi_t_signal_val_e,
         color = ~error, colors = c("#1289d7", "#ff0000"),
@@ -435,9 +439,9 @@ postResample(pred_lon_best_rf, wifi_t_signal_val$LONGITUDE)
 
 wifi_t_signal_val_pred<-wifi_t_signal_val
 
-wifi_t_signal_val_pred$LATITUDE<-pred_lat_rf
-wifi_t_signal_val_pred$LONGITUDE<-pred_lon_rf
-wifi_t_signal_val_pred$FLOOR<-pred_svm_l_F_6
+wifi_t_signal_val_pred$LATITUDE<-pred_lat_good_rf
+wifi_t_signal_val_pred$LONGITUDE<-pred_lon_good_rf
+wifi_t_signal_val_pred$FLOOR<-pred_rf_F_6
 
 wifi_t_signal_val_pred$PREDICTED<-"pred"
 wifi_t_signal_val$PREDICTED<-"real"
@@ -447,25 +451,26 @@ dim3d<-c("LATITUDE", "LONGITUDE", "FLOOR", "PREDICTED")
 #with dplyr union we see that there are same values)#
 df_plot<-rbind(wifi_t_signal_val[dim3d], wifi_t_signal_val_pred[dim3d])
 
-pal <- c("#1289d7", "#ff0000", "#ffa500")
-plot_ly(df_plot, x=~LATITUDE,y=~LONGITUDE, colors= pal,type = "scatter3d",
-        z= ~FLOOR, color=~PREDICTED, mode="markers", size = 1, sizes=3)
-
-pal <- c("#1289d7", "#00008b")
+pal <- c("#ff0000", "#00008b")
+plot_ly(df_plot, x=~LATITUDE,y=~LONGITUDE,type = "scatter3d",
+        z= ~FLOOR, color=~PREDICTED, colors = pal,mode="markers", size=0.5)
 
 
+pal <- c("#1289d7", , "#ffa500")
 
 plot_ly(type = "scatter3d", colors = pal ) %>% 
   add_trace(data=wifi_t_signal_val,
             x = ~LATITUDE,
             y = ~LONGITUDE,
             z = ~FLOOR,
-            mode="markers", sizes= 2) %>%
+            mode="markers") %>%
   add_trace(data=wifi_t_signal_val_pred,
             x = ~LATITUDE,
             y = ~LONGITUDE,
             z = ~FLOOR,
-            mode="markers") %>%
+            mode="markers") 
+
+#%>%
   # add_trace(data=df_plot, 
   #           x = ~LATITUDE,
   #           y = ~LONGITUDE, 
@@ -586,6 +591,19 @@ confusionMatrix(knn_pred_lon, wifi_t_signal_val$LONGITUDE)
 stopCluster(cl)
 
 #### PLOTS ####
+
+
+library("OpenStreetMap")
+Sys.setenv(JAVA_HOME='C:/Program Files/Java/jre1.8.0_191')
+map = openmap(c(39.99360, -0.06949),c(39.99180, -0.06530),minNumTiles=9)
+plot(map)
+shape<- autoplot(map) +
+  labs(title = "Floor 4 Building 2",x = "Longitude",
+       y="Latitude")+
+  geom_point(data=wifi_t_signal_val%>%dplyr:::filter(FLOOR == 4), aes(x=LONGITUDE, y=LATITUDE), size=2, shape=21, fill = "blue") +
+  geom_point(data=wifi_t_signal_val_pred%>%dplyr:::filter(FLOOR == 4), aes(x=LONGITUDE, y=LATITUDE), size=2, shape=21, fill = "orange")+
+facet_wrap(~FLOOR)
+plot(shape)
 # plot_ly(wifi_t_signal, type="scatter3d", x=~LATITUDE, 
 #         y=~LONGITUDE, z=~FLOOR, 
 #         marker = list(
@@ -629,8 +647,8 @@ ggplot(wifi_t_signal, aes(x=LONGITUDE, y=LATITUDE))+
 # ggplot(wifi_t_signal_val, aes(x=BF))+
 #   geom_count(aes(y=WAP323), na.rm = FALSE)
 # 
-# ggplot(wifi_t_signal, aes(x=BF))+
-#   geom_count(aes(y=WAP508), na.rm = FALSE)
+ggplot(wifi_t_signal, aes(x=FLOOR))+
+  geom_count(aes(y=WAP508), na.rm = FALSE)
 # 
 # ggplot(wifi_t_signal_val, aes(x=BF))+
 #   geom_count(aes(y=WAP508), na.rm = FALSE)
