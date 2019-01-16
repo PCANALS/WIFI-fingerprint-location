@@ -256,7 +256,6 @@ summary(wifi_t_goodsignal$WAP_max_value)
 wifi_t_bestsignal<-setdiff(wifi_t_goodsignal, bad_80)
 summary(wifi_t_bestsignal$WAP_max_value)
 
-#######~~~~~~~~ HASTA AQUÍ REVISADO ~~~~~~~~######
 
 
 #### MODELING PARTITION####
@@ -284,7 +283,7 @@ wifi_t_bestsignal$LATITUDE<-as.integer(wifi_t_bestsignal$LATITUDE)
 wifi_t_bestsignal$LONGITUDE<-as.integer(wifi_t_bestsignal$LONGITUDE)
 
 
-#### ~~~~ SVM_ LINEAR~~~~### 
+####SVM_ LINEAR####
 
 # system.time(svm_l_LAT_6<-train(y=wifi_t_signal$LATITUDE,
 #                                x=wifi_t_signal[c("BUILDINGID", waps_ws)], #aplicado en el train completo#
@@ -456,7 +455,7 @@ plot_ly(df_plot, x=~LATITUDE,y=~LONGITUDE,type = "scatter3d",
         z= ~FLOOR, color=~PREDICTED, colors = pal,mode="markers", size=0.5)
 
 
-pal <- c("#1289d7", , "#ffa500")
+pal <- c("#1289d7","#ffa500")
 
 plot_ly(type = "scatter3d", colors = pal ) %>% 
   add_trace(data=wifi_t_signal_val,
@@ -495,8 +494,7 @@ summary(wifi_t_signal_val_pred[nowaps_pred])
 # 
 # rf
 
-#### C.50 with max####
-#### PCA with max####
+
 
 ####LOGISTIC REGRESION####
 
@@ -654,17 +652,6 @@ ggplot(wifi_t_signal, aes(x=FLOOR))+
 #   geom_count(aes(y=WAP508), na.rm = FALSE)
 
 
-#268, 323
-
-#tab<-tableplot(wifi_t_b1, plot = FALSE)
-
-####~~~~~~~~   NOTES - NEXT STEPS    ~~~~~~~~
-
-#FOLLOW USERID
-#GEOM WAP508
-# DELETE FLOOR 4
-#BY BUILDING
-
 ####B_subset by building####
 
 # wifi_t_b0<-wifi_train%>%dplyr:::filter(BUILDINGID == 0) #floors 0 to 3
@@ -680,3 +667,15 @@ ggplot(wifi_t_signal, aes(x=FLOOR))+
 # wifi_t_b1_ws<-wifi_t_b1%>%
 #   select(-waps_t_b1_ns) #df waps w signal
 ####B_near 0 variance####
+
+
+
+####~~~~~~~~   NOTES - NEXT STEPS    ~~~~~~~~####
+
+#FOLLOW USERID
+#GEOM WAP508
+# DELETE FLOOR 4
+#BY BUILDING
+#268, 323
+
+#tab<-tableplot(wifi_t_b1, plot = FALSE)
